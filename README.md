@@ -3,7 +3,9 @@
 > [!Warning]
 > Do not use this code in real-world implementation.
 
-## Compilation
+## Library choice for Ed5519
+We used [filippo.io/edwards25519](https://github.com/FiloSottile/edwards25519) for computing scalar multyplication and sum of points over the elliptic curve. The library contains the requested operations and is well mantained.  
+Moreover, the mantainer seems to be competent and very expirienced in the topics.
 
 ## Execution
 

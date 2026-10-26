@@ -1,9 +1,9 @@
 package main
 
 import (
+	eddsa "ed-dsa"
 	"fmt"
 	"strings"
-	"pkg/ed-dsa"
 )
 
 // InputVector rigorously defines a single test case for the verification matrix.
@@ -15,7 +15,7 @@ type InputVector struct {
 
 func main() {
 	// 1. Define the 6 inputs (INP1 to INP6).
-	// Replace these byte slices with the actual test vectors provided in your lab 
+	// Replace these byte slices with the actual test vectors provided in your lab
 	// (e.g., malformed signatures, small-order keys, non-canonical scalars).
 	inputs := []InputVector{
 		{M: []byte("msg1"), A: make([]byte, 32), Sig: make([]byte, 64)}, // INP1

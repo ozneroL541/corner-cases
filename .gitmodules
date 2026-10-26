@@ -1,0 +1,3 @@
+[submodule "pkg/ed-dsa"]
+	path = pkg/ed-dsa
+	url = git@github.com:ozneroL541/ed-dsa.git

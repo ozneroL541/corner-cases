@@ -1,5 +1,4 @@
-# apocm-template
-Advanced Programming of Cryptographics Methods course projects template repository.
+# Corner Cases
 
 > [!Warning]
 > Do not use this code in real-world implementation.
@@ -9,10 +8,11 @@ Advanced Programming of Cryptographics Methods course projects template reposito
 ## Execution
 
 ## Author
-- Radice Lorenzo @ozneroL541
+- 267234 Marco Egidio Pusceddu @MARCO5P
+- 267646 Radice Lorenzo @ozneroL541
 
 ## License
-Copyright (C) 2026 Lorenzo Radice
+Copyright (C) 2026 Marco Egidio Pusceddu, Lorenzo Radice
 
 This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 

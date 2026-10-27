@@ -73,6 +73,7 @@ Indeed, the sign is bounded to the message iff $[k]A\neq 0$ and the order of a p
     *   Henry de Valence, "It's 25519am", Section *Validation checks* (Small-order check).
 
 ---
+
 ## INP4: Torsion Component added to R
 - **Why it was chosen:** To differentiate between the *Uncofactored* and *Cofactored* verification equations. Adding a low-order torsion point $T$ to $R$ breaks the uncofactored equation, but multiplying the whole equation by the cofactor $h=8$ neutralizes $T$ (since $[8]T = \mathcal{O}$), causing cofactored verifiers to accept it. Because multiple valid signatures can be created for the exact same message by adding different torsion points, this edge case formally permits a **signature malleability attack**.
 - **How it was computed:** We generated a normal keypair ($sk, A$). Instead of a standard deterministic $R$, we picked a random scalar $r$ and computed $R_{base} = [r]B$. We then selected a torsion point $T$ of order 8 from the `smallOrderPoints` array and computed our malicious $R_{final} = R_{base} + T$. Finally, we computed the challenge hash $k = H(R_{final} \parallel A \parallel M)$ and manually forged the scalar $S = r + k \cdot sk \pmod L$. 
@@ -90,6 +91,18 @@ Indeed, the sign is bounded to the message iff $[k]A\neq 0$ and the order of a p
 - **Citation:** 
   * IACR ePrint 2020/1244, Section 5.4 ("Adding low-order points to R").
   * Henry de Valence, "It's 25519am", Section *The verification equation* (Cofactored vs Uncofactored equations).
+
+---
+
+## INP5: Non-canonical Encoding ($y \ge p$)
+
+-   **Why it was chosen:** To test the $C_{can}$ (Canonical Condition/Check). The prime field for Curve25519 is $p = 2^{255} - 19$. Strict libraries reject any $y$-coordinate $\ge p$, while permissive libraries mathematically reduce it modulo $p$.
+-   **How it was computed:** We set $R = \mathcal{O}$ (where the $y$-coordinate is 1). Instead of encoding it canonically as `0100...00`, we added the prime $p$ to the $y$-coordinate. Since $p + 1 = 2^{255} - 18$, this value still fits within the 255-bit representation. We encoded this non-canonical point, computed the challenge $k = H(R_{encoded} \parallel A \parallel M)$, and calculated $S = k \cdot sk \pmod L$ (since $r=0$).
+-   **Attack Classification:** This is a **Malicious Signer Malleability Attack** . Unlike scalar malleability (INP2), a third party cannot forge this because altering $R$ changes the hash $k$. However, a malicious signer can intentionally generate this signature to fracture distributed networks, as strict nodes will reject the encoding while permissive nodes will mathematically accept it.
+-   **Citation:** 
+    *   IACR ePrint 2020/1244, Section 5.2 ("Non-canonical points").
+    *   Henry de Valence, "It's 25519am", Section *Validation checks* (Canonical encoding).
+  
 ## Author
 - 267234 Marco Egidio Pusceddu @MARCO5P
 - 267646 Radice Lorenzo @ozneroL541

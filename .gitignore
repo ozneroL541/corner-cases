@@ -21,8 +21,9 @@ profile.cov
 # Dependency directories (remove the comment below to include it)
 # vendor/
 
-# Go workspace file
-go.work
+# Keep the root workspace; nested workspaces are local development files.
+**/go.work
+!/go.work
 go.work.sum
 
 # env file

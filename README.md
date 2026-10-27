@@ -19,11 +19,6 @@ To natively compile this project run:
 make build
 ```
 The executable will be in `bin/app`.
-### Docker
-Otherwise you can build a docker image with:
-```sh
-docker build -t ex0601 .
-```
 
 ## Execution
 ### Natively
@@ -33,7 +28,7 @@ make run
 ### Docker
 After compiling the Docker image:
 ```sh
-docker run ex0601:latest
+docker run ghcr.io/oznerol541/corner-cases/corner-cases
 ```
 
 ## Library choice for Ed5519

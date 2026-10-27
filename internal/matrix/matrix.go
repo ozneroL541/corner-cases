@@ -33,14 +33,22 @@ func ComputeMatrix(tests []TestCase) [][]bool {
 func PrintMatrix(tests []TestCase) {
 	// Results of the verification functions applied to the test cases
 	results := ComputeMatrix(tests)
+	printOnTerminal(results)
+}
 
+/**
+ * Graphically print the results of the verification functions applied to the test cases
+ * on the terminal.
+ * @param results [][]bool - A 2D slice where each row corresponds to a test case and each column corresponds to a verification function.
+ */
+func printOnTerminal(results [][]bool) {
 	fmt.Println("     | V | V | V | V | V | V |")
 	fmt.Println("     | E | E | E | E | E | E |")
 	fmt.Println("     | R | R | R | R | R | R |")
 	fmt.Println("     | 1 | 2 | 3 | 4 | 5 | 6 |")
 	fmt.Println("------------------------------")
 	for i := range len(results) {
-		fmt.Printf("%s |", tests[i].ID)
+		fmt.Printf("INP%d |", i+1)
 		for j := range len(results[i]) {
 			if results[i][j] {
 				fmt.Print(" ✅|")

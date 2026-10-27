@@ -10,7 +10,7 @@ COPY go.* ./
 COPY Makefile ./
 
 # Copy the source code
-COPY cmd/*/*.go cmd/ex_04_01/
+COPY cmd/*.go cmd/
 COPY *.go ./
 
 # Build the application

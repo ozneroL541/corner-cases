@@ -24,6 +24,11 @@ type TestCase struct {
 	S           string `json:"S"`
 }
 
+type DigitalSignature struct {
+	R []byte `json:"R"`
+	S []byte `json:"S"`
+}
+
 // ---------------------------------------------------------
 // PERMISSIVE PARSING WRAPPERS
 // ---------------------------------------------------------
@@ -131,24 +136,29 @@ func verifySignature(A_bytes, R_bytes, S_bytes, M []byte, check_S, check_can, ch
 // THE 6 VERIFICATION FUNCTIONS
 // ---------------------------------------------------------
 
-func VER1(A, R, S, M []byte) bool {
-	return verifySignature(A, R, S, M, true, false, false, false)
+func VER1(verification_key []byte, digital_signature DigitalSignature, message []byte) bool {
+	return verifySignature(verification_key, digital_signature.R, digital_signature.S, message, true, false, false, false)
 }
-func VER2(A, R, S, M []byte) bool {
-	return verifySignature(A, R, S, M, false, false, false, true)
+func VER2(verification_key []byte, digital_signature DigitalSignature, message []byte) bool {
+	return verifySignature(verification_key, digital_signature.R, digital_signature.S, message, false, false, false, true)
 }
-func VER3(A, R, S, M []byte) bool {
-	return verifySignature(A, R, S, M, true, true, false, true)
+func VER3(verification_key []byte, digital_signature DigitalSignature, message []byte) bool {
+	return verifySignature(verification_key, digital_signature.R, digital_signature.S, message, true, true, false, true)
 }
-func VER4(A, R, S, M []byte) bool {
-	return verifySignature(A, R, S, M, false, true, false, true)
+func VER4(verification_key []byte, digital_signature DigitalSignature, message []byte) bool {
+	return verifySignature(verification_key, digital_signature.R, digital_signature.S, message, false, true, false, true)
 }
-func VER5(A, R, S, M []byte) bool {
-	return verifySignature(A, R, S, M, true, false, true, false)
+func VER5(verification_key []byte, digital_signature DigitalSignature, message []byte) bool {
+	return verifySignature(verification_key, digital_signature.R, digital_signature.S, message, true, false, true, false)
 }
-func VER6(A, R, S, M []byte) bool {
-	return verifySignature(A, R, S, M, false, false, true, false)
+func VER6(verification_key []byte, digital_signature DigitalSignature, message []byte) bool {
+	return verifySignature(verification_key, digital_signature.R, digital_signature.S, message, false, false, true, false)
 }
+
+/**
+ * Array of verification functions
+ */
+var VER_FUNC = []func([]byte, DigitalSignature, []byte) bool{VER1, VER2, VER3, VER4, VER5, VER6}
 
 /**
  * INP1: Standard Signature
@@ -318,9 +328,11 @@ func main() {
 		fmt.Printf("Generating cryptographic %s file...\n", jsonFile)
 		generateInputsFile(jsonFile)
 	}
-
+	/** File data */
 	fileData, _ := os.ReadFile(jsonFile)
+	/** JSON Tests */
 	var tests []TestCase
+
 	json.Unmarshal(fileData, &tests)
 
 	fmt.Println("     | V | V | V | V | V | V |")
@@ -330,23 +342,16 @@ func main() {
 	fmt.Println("------------------------------")
 
 	for _, t := range tests {
-		a, _ := hex.DecodeString(t.A)
+		verification_key, _ := hex.DecodeString(t.A)
 		r, _ := hex.DecodeString(t.R)
 		s, _ := hex.DecodeString(t.S)
-		m, _ := hex.DecodeString(t.Msg)
-
-		results := []bool{
-			VER1(a, r, s, m),
-			VER2(a, r, s, m),
-			VER3(a, r, s, m),
-			VER4(a, r, s, m),
-			VER5(a, r, s, m),
-			VER6(a, r, s, m),
-		}
+		message, _ := hex.DecodeString(t.Msg)
+		digital_signature := DigitalSignature{R: r, S: s}
 
 		fmt.Printf("%s |", t.ID)
-		for _, res := range results {
-			if res {
+
+		for i := range len(VER_FUNC) {
+			if VER_FUNC[i](verification_key, digital_signature, message) {
 				fmt.Print("[✅]|")
 			} else {
 				fmt.Print("[ ]|")
@@ -356,13 +361,9 @@ func main() {
 	}
 }
 
-// ---------------------------------------------------------
-// HELPER FUNCTIONS FOR BIG INT MANIPULATION
-// ---------------------------------------------------------
-
 func reverseBytes(b []byte) []byte {
 	res := make([]byte, len(b))
-	for i := 0; i < len(b); i++ {
+	for i := range b {
 		res[i] = b[len(b)-1-i]
 	}
 	return res

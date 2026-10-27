@@ -139,11 +139,6 @@ func INP5(test []TestCase) []TestCase {
 
 /**
  * INP6: Standard Valid Signature (positive control case)
- * @param tests []TestCase
- * @return []TestCase
- */
-/**
- * INP6: Standard Valid Signature (positive control case)
  * Generates an honest signature and retries until every sanity check passes.
  * @param tests []TestCase
  * @return []TestCase

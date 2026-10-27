@@ -18,7 +18,8 @@ type DigitalSignature struct {
 }
 
 /**
- * parsePermissiveScalar reads 32 bytes. If non-canonical (S >= L), it returns false for the canonical check.
+ * parsePermissiveScalar reads 32 bytes.
+ * If non-canonical (S >= L), it returns false for the canonical check.
  * It simulates permissive library behavior by reducing mod L.
  * @param b []byte - 32 bytes representing the scalar S
  * @return (*edwards25519.Scalar, bool) - The parsed scalar and a boolean indicating if it was canonical
@@ -34,7 +35,9 @@ func parsePermissiveScalar(b []byte) (*edwards25519.Scalar, bool) {
 
 	// S >= L. Simulate permissive library behavior by reducing mod L.
 	var padded [64]byte
+	// Copy the 32 bytes into the first half of the padded array
 	copy(padded[:32], b)
+	// Reduce mod L
 	s, _ = new(edwards25519.Scalar).SetUniformBytes(padded[:])
 	return s, false
 }

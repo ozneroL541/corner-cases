@@ -9,6 +9,8 @@ import (
 	"math/big"
 	"os"
 
+	ed_dsa "ed-dsa"
+
 	"filippo.io/edwards25519"
 )
 
@@ -52,7 +54,7 @@ func parsePermissivePoint(b []byte) (*edwards25519.Point, bool) {
 	}
 
 	// This function uses IsCanonicalY from ed_dsa.go
-	canonical := IsCanonicalY(b)
+	canonical := ed_dsa.IsCanonicalY(b)
 
 	if !canonical {
 		// INP5 uses R = non-canonical identity (p + 1)
@@ -69,6 +71,10 @@ func parsePermissivePoint(b []byte) (*edwards25519.Point, bool) {
 
 	p, err := new(edwards25519.Point).SetBytes(b)
 	return p, err == nil
+}
+
+func generateKeyPair() ([]byte, []byte) {
+	return ed_dsa.KeyGen()
 }
 
 // ---------------------------------------------------------
@@ -111,7 +117,7 @@ func verifySignature(A_bytes, R_bytes, S_bytes, M []byte, check_S, check_can, ch
 
 	// leftSide = [S]B
 	leftSide := new(edwards25519.Point).ScalarBaseMult(sScalar)
-	
+
 	// rightSide = R + [k]A
 	kA := new(edwards25519.Point).ScalarMult(hScalar, aPoint)
 	rightSide := new(edwards25519.Point).Add(rPoint, kA)
@@ -148,37 +154,36 @@ func VER6(A, R, S, M []byte) bool {
 	return verifySignature(A, R, S, M, false, false, true, false)
 }
 
-// ---------------------------------------------------------
-// INPUT GENERATION & MAIN
-// ---------------------------------------------------------
-
+/**
+ * Generate a JSON file containing the 6 verification functions applied to the 6 test cases.
+ */
 func generateInputsFile(filename string) {
 	var tests []TestCase
 
 	// INP1: Standard Signature
-	sk1, pk1 := KeyGen() // From ed_dsa.go
+	sk1, pk1 := generateKeyPair()
 	msg1 := []byte("Message1")
-	r1, s1 := SigGen(sk1, pk1, msg1)
+	r1, s1 := ed_dsa.SigGen(sk1, pk1, msg1)
 	tests = append(tests, TestCase{"INP1", "Standard Valid Signature", hex.EncodeToString(msg1), hex.EncodeToString(pk1), hex.EncodeToString(r1), hex.EncodeToString(s1)})
 
 	// INP2: Unreduced Scalar (S + L)
-	sk2, pk2 := KeyGen()
+	sk2, pk2 := generateKeyPair()
 	msg2 := []byte("Message2")
-	r2, s2 := SigGen(sk2, pk2, msg2)
-	
+	r2, s2 := ed_dsa.SigGen(sk2, pk2, msg2)
+
 	sBig := new(big.Int).SetBytes(reverseBytes(s2)) // s2 is little-endian
 	// L = 2^252 + 27742317777372353535851937790883648493
-	L_str := "1000000000000000000000000000000014def9dea2f79cd65812631a5cf5d3ed" 
+	L_str := "1000000000000000000000000000000014def9dea2f79cd65812631a5cf5d3ed"
 	L, _ := new(big.Int).SetString(L_str, 16)
 	sBig.Add(sBig, L)
-	
+
 	s2_unreduced := reverseBytes(padTo32(sBig.Bytes()))
 	tests = append(tests, TestCase{"INP2", "Unreduced Scalar", hex.EncodeToString(msg2), hex.EncodeToString(pk2), hex.EncodeToString(r2), hex.EncodeToString(s2_unreduced)})
 
 	// INP3: Small-Order Public Key (A = O)
 	msg3 := []byte("Message3")
 	pk3, _ := hex.DecodeString("0100000000000000000000000000000000000000000000000000000000000000") // Identity
-	
+
 	randomScalarBytes := make([]byte, 64)
 	rand.Read(randomScalarBytes)
 	s3Scalar, _ := new(edwards25519.Scalar).SetUniformBytes(randomScalarBytes)
@@ -189,11 +194,11 @@ func generateInputsFile(filename string) {
 
 	// INP4: Torsion Component in R
 	msg4 := []byte("Message4")
-	sk4, pk4 := KeyGen()
+	sk4, pk4 := generateKeyPair()
 	// Torsion point of order 8 from smallOrderPoints array (index 4)
 	T_bytes, _ := hex.DecodeString("C7176A703D4DD84FBA3C0B760D10670F2A2053FA2C39CCC64EC7FD7792AC037A")
 	T, _ := new(edwards25519.Point).SetBytes(T_bytes)
-	
+
 	r4BaseBytes := make([]byte, 64)
 	rand.Read(r4BaseBytes)
 	r4Scalar, _ := new(edwards25519.Scalar).SetUniformBytes(r4BaseBytes)
@@ -216,20 +221,20 @@ func generateInputsFile(filename string) {
 
 	// INP5: Non-Canonical R
 	msg5 := []byte("Message5")
-	sk5, pk5 := KeyGen()
-	
+	sk5, pk5 := generateKeyPair()
+
 	// R = O, encoded non-canonically as y = p + 1
 	r5, _ := hex.DecodeString("eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f")
-	
+
 	hasher5 := sha512.New()
 	hasher5.Write(r5)
 	hasher5.Write(pk5)
 	hasher5.Write(msg5)
 	k5Scalar, _ := new(edwards25519.Scalar).SetUniformBytes(hasher5.Sum(nil))
-	
+
 	h5 := sha512.Sum512(sk5)
 	s_sk5, _ := new(edwards25519.Scalar).SetBytesWithClamping(h5[:32])
-	
+
 	rZero := new(edwards25519.Scalar) // r = 0 because R = O
 	s5Scalar := new(edwards25519.Scalar).MultiplyAdd(k5Scalar, s_sk5, rZero)
 	s5 := s5Scalar.Bytes()
@@ -237,15 +242,15 @@ func generateInputsFile(filename string) {
 
 	// INP6: Standard Signature (Edge Case R = O)
 	msg6 := []byte("Message6")
-	sk6, pk6 := KeyGen()
+	sk6, pk6 := generateKeyPair()
 	r6, _ := hex.DecodeString("0100000000000000000000000000000000000000000000000000000000000000") // R = O canonical
-	
+
 	hasher6 := sha512.New()
 	hasher6.Write(r6)
 	hasher6.Write(pk6)
 	hasher6.Write(msg6)
 	k6Scalar, _ := new(edwards25519.Scalar).SetUniformBytes(hasher6.Sum(nil))
-	
+
 	h6 := sha512.Sum512(sk6)
 	s_sk6, _ := new(edwards25519.Scalar).SetBytesWithClamping(h6[:32])
 	s6Scalar := new(edwards25519.Scalar).MultiplyAdd(k6Scalar, s_sk6, rZero)
@@ -257,11 +262,15 @@ func generateInputsFile(filename string) {
 }
 
 func main() {
-	jsonFile := "test.json"
-	
+	/**
+	 * Tests JSON file
+	 * TODO: Reference
+	 */
+	const jsonFile = "test.json"
+
 	// Create JSON if it doesn't exist to ensure reproducible cryptographic inputs
 	if _, err := os.Stat(jsonFile); os.IsNotExist(err) {
-		fmt.Println("Generating cryptographic test.json file...")
+		fmt.Println("Generating cryptographic %s file...", jsonFile)
 		generateInputsFile(jsonFile)
 	}
 

@@ -73,10 +73,6 @@ func parsePermissivePoint(b []byte) (*edwards25519.Point, bool) {
 	return p, err == nil
 }
 
-func generateKeyPair() ([]byte, []byte) {
-	return ed_dsa.KeyGen()
-}
-
 // ---------------------------------------------------------
 // CORE VERIFICATION ENGINE
 // ---------------------------------------------------------
@@ -155,19 +151,25 @@ func VER6(A, R, S, M []byte) bool {
 }
 
 /**
- * Generate a JSON file containing the 6 verification functions applied to the 6 test cases.
+ * INP1: Standard Signature
+ * @param tests []TestCase
+ * @return []TestCase
  */
-func generateInputsFile(filename string) {
-	var tests []TestCase
-
-	// INP1: Standard Signature
-	sk1, pk1 := generateKeyPair()
+func INP1(tests []TestCase) []TestCase {
+	sk1, pk1 := ed_dsa.KeyGen()
 	msg1 := []byte("Message1")
 	r1, s1 := ed_dsa.SigGen(sk1, pk1, msg1)
 	tests = append(tests, TestCase{"INP1", "Standard Valid Signature", hex.EncodeToString(msg1), hex.EncodeToString(pk1), hex.EncodeToString(r1), hex.EncodeToString(s1)})
+	return tests
+}
 
-	// INP2: Unreduced Scalar (S + L)
-	sk2, pk2 := generateKeyPair()
+/**
+ * INP2: Unreduced Scalar (S + L)
+ * @param tests []TestCase
+ * @return []TestCase
+ */
+func INP2(test []TestCase) []TestCase {
+	sk2, pk2 := ed_dsa.KeyGen()
 	msg2 := []byte("Message2")
 	r2, s2 := ed_dsa.SigGen(sk2, pk2, msg2)
 
@@ -178,9 +180,16 @@ func generateInputsFile(filename string) {
 	sBig.Add(sBig, L)
 
 	s2_unreduced := reverseBytes(padTo32(sBig.Bytes()))
-	tests = append(tests, TestCase{"INP2", "Unreduced Scalar", hex.EncodeToString(msg2), hex.EncodeToString(pk2), hex.EncodeToString(r2), hex.EncodeToString(s2_unreduced)})
+	test = append(test, TestCase{"INP2", "Unreduced Scalar", hex.EncodeToString(msg2), hex.EncodeToString(pk2), hex.EncodeToString(r2), hex.EncodeToString(s2_unreduced)})
+	return test
+}
 
-	// INP3: Small-Order Public Key (A = O)
+/**
+ * INP3: Small-Order Public Key (A = O)
+ * @param tests []TestCase
+ * @return []TestCase
+ */
+func INP3(test []TestCase) []TestCase {
 	msg3 := []byte("Message3")
 	pk3, _ := hex.DecodeString("0100000000000000000000000000000000000000000000000000000000000000") // Identity
 
@@ -190,11 +199,18 @@ func generateInputsFile(filename string) {
 	s3 := s3Scalar.Bytes()
 	r3Point := new(edwards25519.Point).ScalarBaseMult(s3Scalar) // R = [S]B (because kA = O)
 	r3 := r3Point.Bytes()
-	tests = append(tests, TestCase{"INP3", "Small-Order Public Key", hex.EncodeToString(msg3), hex.EncodeToString(pk3), hex.EncodeToString(r3), hex.EncodeToString(s3)})
+	test = append(test, TestCase{"INP3", "Small-Order Public Key", hex.EncodeToString(msg3), hex.EncodeToString(pk3), hex.EncodeToString(r3), hex.EncodeToString(s3)})
+	return test
+}
 
-	// INP4: Torsion Component in R
+/**
+ * INP4: Torsion Component in R
+ * @param tests []TestCase
+ * @return []TestCase
+ */
+func INP4(test []TestCase) []TestCase {
 	msg4 := []byte("Message4")
-	sk4, pk4 := generateKeyPair()
+	sk4, pk4 := ed_dsa.KeyGen()
 	// Torsion point of order 8 from smallOrderPoints array (index 4)
 	T_bytes, _ := hex.DecodeString("C7176A703D4DD84FBA3C0B760D10670F2A2053FA2C39CCC64EC7FD7792AC037A")
 	T, _ := new(edwards25519.Point).SetBytes(T_bytes)
@@ -217,11 +233,18 @@ func generateInputsFile(filename string) {
 	s_sk, _ := new(edwards25519.Scalar).SetBytesWithClamping(h[:32])
 	s4Scalar := new(edwards25519.Scalar).MultiplyAdd(k4Scalar, s_sk, r4Scalar) // S = r + k*sk
 	s4 := s4Scalar.Bytes()
-	tests = append(tests, TestCase{"INP4", "Torsion Component in R", hex.EncodeToString(msg4), hex.EncodeToString(pk4), hex.EncodeToString(r4), hex.EncodeToString(s4)})
+	test = append(test, TestCase{"INP4", "Torsion Component in R", hex.EncodeToString(msg4), hex.EncodeToString(pk4), hex.EncodeToString(r4), hex.EncodeToString(s4)})
+	return test
+}
 
-	// INP5: Non-Canonical R
+/**
+ * INP5: Non-Canonical R
+ * @param tests []TestCase
+ * @return []TestCase
+ */
+func INP5(test []TestCase) []TestCase {
 	msg5 := []byte("Message5")
-	sk5, pk5 := generateKeyPair()
+	sk5, pk5 := ed_dsa.KeyGen()
 
 	// R = O, encoded non-canonically as y = p + 1
 	r5, _ := hex.DecodeString("eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f")
@@ -235,14 +258,21 @@ func generateInputsFile(filename string) {
 	h5 := sha512.Sum512(sk5)
 	s_sk5, _ := new(edwards25519.Scalar).SetBytesWithClamping(h5[:32])
 
-	rZero := new(edwards25519.Scalar) // r = 0 because R = O
-	s5Scalar := new(edwards25519.Scalar).MultiplyAdd(k5Scalar, s_sk5, rZero)
+	rZero5 := new(edwards25519.Scalar) // r = 0 because R = O
+	s5Scalar := new(edwards25519.Scalar).MultiplyAdd(k5Scalar, s_sk5, rZero5)
 	s5 := s5Scalar.Bytes()
-	tests = append(tests, TestCase{"INP5", "Non-canonical Encoding", hex.EncodeToString(msg5), hex.EncodeToString(pk5), hex.EncodeToString(r5), hex.EncodeToString(s5)})
+	test = append(test, TestCase{"INP5", "Non-canonical Encoding", hex.EncodeToString(msg5), hex.EncodeToString(pk5), hex.EncodeToString(r5), hex.EncodeToString(s5)})
+	return test
+}
 
-	// INP6: Standard Signature (Edge Case R = O)
+/**
+ * INP6: Standard Signature (Edge Case R = O)
+ * @param tests []TestCase
+ * @return []TestCase
+ */
+func INP6(test []TestCase) []TestCase {
 	msg6 := []byte("Message6")
-	sk6, pk6 := generateKeyPair()
+	sk6, pk6 := ed_dsa.KeyGen()
 	r6, _ := hex.DecodeString("0100000000000000000000000000000000000000000000000000000000000000") // R = O canonical
 
 	hasher6 := sha512.New()
@@ -251,13 +281,28 @@ func generateInputsFile(filename string) {
 	hasher6.Write(msg6)
 	k6Scalar, _ := new(edwards25519.Scalar).SetUniformBytes(hasher6.Sum(nil))
 
+	rZero6 := new(edwards25519.Scalar) // r = 0 because R = O
 	h6 := sha512.Sum512(sk6)
 	s_sk6, _ := new(edwards25519.Scalar).SetBytesWithClamping(h6[:32])
-	s6Scalar := new(edwards25519.Scalar).MultiplyAdd(k6Scalar, s_sk6, rZero)
+	s6Scalar := new(edwards25519.Scalar).MultiplyAdd(k6Scalar, s_sk6, rZero6)
 	s6 := s6Scalar.Bytes()
-	tests = append(tests, TestCase{"INP6", "Valid Edge-Case (R=O)", hex.EncodeToString(msg6), hex.EncodeToString(pk6), hex.EncodeToString(r6), hex.EncodeToString(s6)})
+	test = append(test, TestCase{"INP6", "Valid Edge-Case (R=O)", hex.EncodeToString(msg6), hex.EncodeToString(pk6), hex.EncodeToString(r6), hex.EncodeToString(s6)})
+	return test
+}
 
-	fileData, _ := json.MarshalIndent(tests, "", "  ")
+/** Array of INP functions */
+var INP_FUNC = []func([]TestCase) []TestCase{INP1, INP2, INP3, INP4, INP5, INP6}
+
+/**
+ * Generate a JSON file containing the 6 verification functions applied to the 6 test cases.
+ */
+func generateInputsFile(filename string) {
+	/** Test Cases for the 6 Verification Functions **/
+	var test []TestCase
+	for _, inpFunc := range INP_FUNC {
+		test = inpFunc(test)
+	}
+	fileData, _ := json.MarshalIndent(test, "", "  ")
 	os.WriteFile(filename, fileData, 0644)
 }
 
@@ -270,7 +315,7 @@ func main() {
 
 	// Create JSON if it doesn't exist to ensure reproducible cryptographic inputs
 	if _, err := os.Stat(jsonFile); os.IsNotExist(err) {
-		fmt.Println("Generating cryptographic %s file...", jsonFile)
+		fmt.Printf("Generating cryptographic %s file...\n", jsonFile)
 		generateInputsFile(jsonFile)
 	}
 
@@ -278,8 +323,11 @@ func main() {
 	var tests []TestCase
 	json.Unmarshal(fileData, &tests)
 
-	fmt.Println("     | VER1 | VER2 | VER3 | VER4 | VER5 | VER6 |")
-	fmt.Println("--------------------------------------------------")
+	fmt.Println("     | V | V | V | V | V | V |")
+	fmt.Println("     | E | E | E | E | E | E |")
+	fmt.Println("     | R | R | R | R | R | R |")
+	fmt.Println("     | 1 | 2 | 3 | 4 | 5 | 6 |")
+	fmt.Println("------------------------------")
 
 	for _, t := range tests {
 		a, _ := hex.DecodeString(t.A)
@@ -299,9 +347,9 @@ func main() {
 		fmt.Printf("%s |", t.ID)
 		for _, res := range results {
 			if res {
-				fmt.Print("  [v] |")
+				fmt.Print("[✅]|")
 			} else {
-				fmt.Print("  [ ] |")
+				fmt.Print("[ ]|")
 			}
 		}
 		fmt.Println()

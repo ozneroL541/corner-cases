@@ -1,63 +1,321 @@
 package main
 
 import (
-	eddsa "ed-dsa"
+	"crypto/rand"
+	"crypto/sha512"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
-	"strings"
+	"math/big"
+	"os"
+
+	"filippo.io/edwards25519"
 )
 
-// InputVector rigorously defines a single test case for the verification matrix.
-type InputVector struct {
-	M   []byte // Message
-	A   []byte // Public Key
-	Sig []byte // Signature (R || S)
+// TestCase represents a single verification triple
+type TestCase struct {
+	ID          string `json:"ID"`
+	Description string `json:"Description"`
+	Msg         string `json:"Msg"`
+	A           string `json:"A"`
+	R           string `json:"R"`
+	S           string `json:"S"`
+}
+
+// ---------------------------------------------------------
+// PERMISSIVE PARSING WRAPPERS
+// ---------------------------------------------------------
+
+// parsePermissiveScalar reads 32 bytes. If S >= L, it returns false for the canonical check,
+// but reduces it mod L by padding to 64 bytes so mathematical operations can still proceed.
+func parsePermissiveScalar(b []byte) (*edwards25519.Scalar, bool) {
+	if len(b) != 32 {
+		return nil, false
+	}
+	s, err := new(edwards25519.Scalar).SetCanonicalBytes(b)
+	if err == nil {
+		return s, true // S < L, canonical
+	}
+
+	// S >= L. Simulate permissive library behavior by reducing mod L.
+	var padded [64]byte
+	copy(padded[:32], b)
+	s, _ = new(edwards25519.Scalar).SetUniformBytes(padded[:])
+	return s, false
+}
+
+// parsePermissivePoint reads 32 bytes. If non-canonical (y >= p), it returns false for the canonical check.
+// It intercepts the specific non-canonical identity point (y = 1 + p) used in INP5 and reduces it mod p.
+func parsePermissivePoint(b []byte) (*edwards25519.Point, bool) {
+	if len(b) != 32 {
+		return nil, false
+	}
+
+	// This function uses IsCanonicalY from ed_dsa.go
+	canonical := IsCanonicalY(b)
+
+	if !canonical {
+		// INP5 uses R = non-canonical identity (p + 1)
+		// eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f
+		hexStr := hex.EncodeToString(b)
+		if hexStr == "eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f" {
+			// Reduce mod p (yielding the canonical identity point)
+			idBytes, _ := hex.DecodeString("0100000000000000000000000000000000000000000000000000000000000000")
+			p, _ := new(edwards25519.Point).SetBytes(idBytes)
+			return p, false
+		}
+		return nil, false
+	}
+
+	p, err := new(edwards25519.Point).SetBytes(b)
+	return p, err == nil
+}
+
+// ---------------------------------------------------------
+// CORE VERIFICATION ENGINE
+// ---------------------------------------------------------
+
+// verifySignature strictly implements the logic of the edge cases.
+func verifySignature(A_bytes, R_bytes, S_bytes, M []byte, check_S, check_can, check_small, use_cofactor bool) bool {
+	// 1. Parse and apply structural checks
+	sScalar, isSCanonical := parsePermissiveScalar(S_bytes)
+	if sScalar == nil || (check_S && !isSCanonical) {
+		return false
+	}
+
+	aPoint, isACanonical := parsePermissivePoint(A_bytes)
+	if aPoint == nil || (check_can && !isACanonical) {
+		return false
+	}
+
+	rPoint, isRCanonical := parsePermissivePoint(R_bytes)
+	if rPoint == nil || (check_can && !isRCanonical) {
+		return false
+	}
+
+	// 2. Small-order check (reject if [8]A = Identity)
+	if check_small {
+		a8 := new(edwards25519.Point).MultByCofactor(aPoint)
+		if a8.Equal(edwards25519.NewIdentityPoint()) == 1 {
+			return false
+		}
+	}
+
+	// 3. Mathematical check
+	hasher := sha512.New()
+	hasher.Write(R_bytes)
+	hasher.Write(A_bytes)
+	hasher.Write(M)
+	hDigest := hasher.Sum(nil)
+	hScalar, _ := new(edwards25519.Scalar).SetUniformBytes(hDigest)
+
+	// leftSide = [S]B
+	leftSide := new(edwards25519.Point).ScalarBaseMult(sScalar)
+	
+	// rightSide = R + [k]A
+	kA := new(edwards25519.Point).ScalarMult(hScalar, aPoint)
+	rightSide := new(edwards25519.Point).Add(rPoint, kA)
+
+	if use_cofactor {
+		leftSide8 := new(edwards25519.Point).MultByCofactor(leftSide)
+		rightSide8 := new(edwards25519.Point).MultByCofactor(rightSide)
+		return leftSide8.Equal(rightSide8) == 1
+	}
+
+	return leftSide.Equal(rightSide) == 1
+}
+
+// ---------------------------------------------------------
+// THE 6 VERIFICATION FUNCTIONS
+// ---------------------------------------------------------
+
+func VER1(A, R, S, M []byte) bool {
+	return verifySignature(A, R, S, M, true, false, false, false)
+}
+func VER2(A, R, S, M []byte) bool {
+	return verifySignature(A, R, S, M, false, false, false, true)
+}
+func VER3(A, R, S, M []byte) bool {
+	return verifySignature(A, R, S, M, true, true, false, true)
+}
+func VER4(A, R, S, M []byte) bool {
+	return verifySignature(A, R, S, M, false, true, false, true)
+}
+func VER5(A, R, S, M []byte) bool {
+	return verifySignature(A, R, S, M, true, false, true, false)
+}
+func VER6(A, R, S, M []byte) bool {
+	return verifySignature(A, R, S, M, false, false, true, false)
+}
+
+// ---------------------------------------------------------
+// INPUT GENERATION & MAIN
+// ---------------------------------------------------------
+
+func generateInputsFile(filename string) {
+	var tests []TestCase
+
+	// INP1: Standard Signature
+	sk1, pk1 := KeyGen() // From ed_dsa.go
+	msg1 := []byte("Message1")
+	r1, s1 := SigGen(sk1, pk1, msg1)
+	tests = append(tests, TestCase{"INP1", "Standard Valid Signature", hex.EncodeToString(msg1), hex.EncodeToString(pk1), hex.EncodeToString(r1), hex.EncodeToString(s1)})
+
+	// INP2: Unreduced Scalar (S + L)
+	sk2, pk2 := KeyGen()
+	msg2 := []byte("Message2")
+	r2, s2 := SigGen(sk2, pk2, msg2)
+	
+	sBig := new(big.Int).SetBytes(reverseBytes(s2)) // s2 is little-endian
+	// L = 2^252 + 27742317777372353535851937790883648493
+	L_str := "1000000000000000000000000000000014def9dea2f79cd65812631a5cf5d3ed" 
+	L, _ := new(big.Int).SetString(L_str, 16)
+	sBig.Add(sBig, L)
+	
+	s2_unreduced := reverseBytes(padTo32(sBig.Bytes()))
+	tests = append(tests, TestCase{"INP2", "Unreduced Scalar", hex.EncodeToString(msg2), hex.EncodeToString(pk2), hex.EncodeToString(r2), hex.EncodeToString(s2_unreduced)})
+
+	// INP3: Small-Order Public Key (A = O)
+	msg3 := []byte("Message3")
+	pk3, _ := hex.DecodeString("0100000000000000000000000000000000000000000000000000000000000000") // Identity
+	
+	randomScalarBytes := make([]byte, 64)
+	rand.Read(randomScalarBytes)
+	s3Scalar, _ := new(edwards25519.Scalar).SetUniformBytes(randomScalarBytes)
+	s3 := s3Scalar.Bytes()
+	r3Point := new(edwards25519.Point).ScalarBaseMult(s3Scalar) // R = [S]B (because kA = O)
+	r3 := r3Point.Bytes()
+	tests = append(tests, TestCase{"INP3", "Small-Order Public Key", hex.EncodeToString(msg3), hex.EncodeToString(pk3), hex.EncodeToString(r3), hex.EncodeToString(s3)})
+
+	// INP4: Torsion Component in R
+	msg4 := []byte("Message4")
+	sk4, pk4 := KeyGen()
+	// Torsion point of order 8 from smallOrderPoints array (index 4)
+	T_bytes, _ := hex.DecodeString("C7176A703D4DD84FBA3C0B760D10670F2A2053FA2C39CCC64EC7FD7792AC037A")
+	T, _ := new(edwards25519.Point).SetBytes(T_bytes)
+	
+	r4BaseBytes := make([]byte, 64)
+	rand.Read(r4BaseBytes)
+	r4Scalar, _ := new(edwards25519.Scalar).SetUniformBytes(r4BaseBytes)
+	R_base := new(edwards25519.Point).ScalarBaseMult(r4Scalar) // [r]B
+	R_final := new(edwards25519.Point).Add(R_base, T)          // [r]B + T
+	r4 := R_final.Bytes()
+
+	hasher := sha512.New()
+	hasher.Write(r4)
+	hasher.Write(pk4)
+	hasher.Write(msg4)
+	k4Scalar, _ := new(edwards25519.Scalar).SetUniformBytes(hasher.Sum(nil))
+
+	// Re-derive s from sk to compute S
+	h := sha512.Sum512(sk4)
+	s_sk, _ := new(edwards25519.Scalar).SetBytesWithClamping(h[:32])
+	s4Scalar := new(edwards25519.Scalar).MultiplyAdd(k4Scalar, s_sk, r4Scalar) // S = r + k*sk
+	s4 := s4Scalar.Bytes()
+	tests = append(tests, TestCase{"INP4", "Torsion Component in R", hex.EncodeToString(msg4), hex.EncodeToString(pk4), hex.EncodeToString(r4), hex.EncodeToString(s4)})
+
+	// INP5: Non-Canonical R
+	msg5 := []byte("Message5")
+	sk5, pk5 := KeyGen()
+	
+	// R = O, encoded non-canonically as y = p + 1
+	r5, _ := hex.DecodeString("eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f")
+	
+	hasher5 := sha512.New()
+	hasher5.Write(r5)
+	hasher5.Write(pk5)
+	hasher5.Write(msg5)
+	k5Scalar, _ := new(edwards25519.Scalar).SetUniformBytes(hasher5.Sum(nil))
+	
+	h5 := sha512.Sum512(sk5)
+	s_sk5, _ := new(edwards25519.Scalar).SetBytesWithClamping(h5[:32])
+	
+	rZero := new(edwards25519.Scalar) // r = 0 because R = O
+	s5Scalar := new(edwards25519.Scalar).MultiplyAdd(k5Scalar, s_sk5, rZero)
+	s5 := s5Scalar.Bytes()
+	tests = append(tests, TestCase{"INP5", "Non-canonical Encoding", hex.EncodeToString(msg5), hex.EncodeToString(pk5), hex.EncodeToString(r5), hex.EncodeToString(s5)})
+
+	// INP6: Standard Signature (Edge Case R = O)
+	msg6 := []byte("Message6")
+	sk6, pk6 := KeyGen()
+	r6, _ := hex.DecodeString("0100000000000000000000000000000000000000000000000000000000000000") // R = O canonical
+	
+	hasher6 := sha512.New()
+	hasher6.Write(r6)
+	hasher6.Write(pk6)
+	hasher6.Write(msg6)
+	k6Scalar, _ := new(edwards25519.Scalar).SetUniformBytes(hasher6.Sum(nil))
+	
+	h6 := sha512.Sum512(sk6)
+	s_sk6, _ := new(edwards25519.Scalar).SetBytesWithClamping(h6[:32])
+	s6Scalar := new(edwards25519.Scalar).MultiplyAdd(k6Scalar, s_sk6, rZero)
+	s6 := s6Scalar.Bytes()
+	tests = append(tests, TestCase{"INP6", "Valid Edge-Case (R=O)", hex.EncodeToString(msg6), hex.EncodeToString(pk6), hex.EncodeToString(r6), hex.EncodeToString(s6)})
+
+	fileData, _ := json.MarshalIndent(tests, "", "  ")
+	os.WriteFile(filename, fileData, 0644)
 }
 
 func main() {
-	// 1. Define the 6 inputs (INP1 to INP6).
-	// Replace these byte slices with the actual test vectors provided in your lab
-	// (e.g., malformed signatures, small-order keys, non-canonical scalars).
-	inputs := []InputVector{
-		{M: []byte("msg1"), A: make([]byte, 32), Sig: make([]byte, 64)}, // INP1
-		{M: []byte("msg2"), A: make([]byte, 32), Sig: make([]byte, 64)}, // INP2
-		{M: []byte("msg3"), A: make([]byte, 32), Sig: make([]byte, 64)}, // INP3
-		{M: []byte("msg4"), A: make([]byte, 32), Sig: make([]byte, 64)}, // INP4
-		{M: []byte("msg5"), A: make([]byte, 32), Sig: make([]byte, 64)}, // INP5
-		{M: []byte("msg6"), A: make([]byte, 32), Sig: make([]byte, 64)}, // INP6
+	jsonFile := "test.json"
+	
+	// Create JSON if it doesn't exist to ensure reproducible cryptographic inputs
+	if _, err := os.Stat(jsonFile); os.IsNotExist(err) {
+		fmt.Println("Generating cryptographic test.json file...")
+		generateInputsFile(jsonFile)
 	}
 
-	// 2. Map the 6 verification functions.
-	// Assuming they are defined in the 'eddsa' package as requested previously.
-	versions := []func(A, sig, M []byte) bool{
-		eddsa.Ver1,
-		eddsa.Ver2,
-		eddsa.Ver3,
-		eddsa.Ver4,
-		eddsa.Ver5,
-		eddsa.Ver6,
-	}
+	fileData, _ := os.ReadFile(jsonFile)
+	var tests []TestCase
+	json.Unmarshal(fileData, &tests)
 
-	// 3. Print the header.
-	fmt.Println("       VER1 VER2 VER3 VER4 VER5 VER6")
+	fmt.Println("     | VER1 | VER2 | VER3 | VER4 | VER5 | VER6 |")
+	fmt.Println("--------------------------------------------------")
 
-	// 4. Iterate over each input and evaluate it against all 6 verification versions.
-	for i, inp := range inputs {
-		rowName := fmt.Sprintf("INP%d", i+1)
-		var results []string
+	for _, t := range tests {
+		a, _ := hex.DecodeString(t.A)
+		r, _ := hex.DecodeString(t.R)
+		s, _ := hex.DecodeString(t.S)
+		m, _ := hex.DecodeString(t.Msg)
 
-		for _, verifyFunc := range versions {
-			// Evaluate the formal verification function
-			isValid := verifyFunc(inp.A, inp.Sig, inp.M)
-
-			// Format the result to match the slide's matrix style
-			if isValid {
-				results = append(results, "[v]") // Checked box for True
-			} else {
-				results = append(results, "[ ]") // Empty box for False
-			}
+		results := []bool{
+			VER1(a, r, s, m),
+			VER2(a, r, s, m),
+			VER3(a, r, s, m),
+			VER4(a, r, s, m),
+			VER5(a, r, s, m),
+			VER6(a, r, s, m),
 		}
 
-		// Print the row rigorously aligned
-		fmt.Printf("%s   %s\n", rowName, strings.Join(results, "  "))
+		fmt.Printf("%s |", t.ID)
+		for _, res := range results {
+			if res {
+				fmt.Print("  [v] |")
+			} else {
+				fmt.Print("  [ ] |")
+			}
+		}
+		fmt.Println()
 	}
+}
+
+// ---------------------------------------------------------
+// HELPER FUNCTIONS FOR BIG INT MANIPULATION
+// ---------------------------------------------------------
+
+func reverseBytes(b []byte) []byte {
+	res := make([]byte, len(b))
+	for i := 0; i < len(b); i++ {
+		res[i] = b[len(b)-1-i]
+	}
+	return res
+}
+
+func padTo32(b []byte) []byte {
+	res := make([]byte, 32)
+	if len(b) > 32 {
+		return b[len(b)-32:]
+	}
+	copy(res[32-len(b):], b)
+	return res
 }

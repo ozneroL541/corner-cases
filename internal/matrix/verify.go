@@ -17,12 +17,12 @@ type DigitalSignature struct {
 	S []byte `json:"S"`
 }
 
-// ---------------------------------------------------------
-// PERMISSIVE PARSING WRAPPERS
-// ---------------------------------------------------------
-
-// parsePermissiveScalar reads 32 bytes. If S >= L, it returns false for the canonical check,
-// but reduces it mod L by padding to 64 bytes so mathematical operations can still proceed.
+/**
+ * parsePermissiveScalar reads 32 bytes. If non-canonical (S >= L), it returns false for the canonical check.
+ * It simulates permissive library behavior by reducing mod L.
+ * @param b []byte - 32 bytes representing the scalar S
+ * @return (*edwards25519.Scalar, bool) - The parsed scalar and a boolean indicating if it was canonical
+ */
 func parsePermissiveScalar(b []byte) (*edwards25519.Scalar, bool) {
 	if len(b) != 32 {
 		return nil, false
@@ -39,8 +39,12 @@ func parsePermissiveScalar(b []byte) (*edwards25519.Scalar, bool) {
 	return s, false
 }
 
-// parsePermissivePoint reads 32 bytes. If non-canonical (y >= p), it returns false for the canonical check.
-// It intercepts the specific non-canonical identity point (y = 1 + p) used in INP5 and reduces it mod p.
+/**
+ * parsePermissivePoint reads 32 bytes. If non-canonical (not a valid point), it returns false for the canonical check.
+ * It simulates permissive library behavior by checking for the non-canonical identity point.
+ * @param b []byte - 32 bytes representing the point (A or R)
+ * @return (*edwards25519.Point, bool) - The parsed point and a boolean indicating if it was canonical
+ */
 func parsePermissivePoint(b []byte) (*edwards25519.Point, bool) {
 	if len(b) != 32 {
 		return nil, false
@@ -66,10 +70,6 @@ func parsePermissivePoint(b []byte) (*edwards25519.Point, bool) {
 	return p, err == nil
 }
 
-// ---------------------------------------------------------
-// CORE VERIFICATION ENGINE
-// ---------------------------------------------------------
-
 /**
  * verifySignature performs the EdDSA signature verification with configurable checks.
  * @param A_bytes []byte - Public key (32 bytes)
@@ -88,17 +88,14 @@ func verifySignature(A_bytes, R_bytes, S_bytes, M []byte, check_S, check_can, ch
 	if sScalar == nil || (check_S && !isSCanonical) {
 		return false
 	}
-
 	aPoint, isACanonical := parsePermissivePoint(A_bytes)
 	if aPoint == nil || (check_can && !isACanonical) {
 		return false
 	}
-
 	rPoint, isRCanonical := parsePermissivePoint(R_bytes)
 	if rPoint == nil || (check_can && !isRCanonical) {
 		return false
 	}
-
 	// 2. Small-order check (reject if [8]A = Identity)
 	if check_small {
 		a8 := new(edwards25519.Point).MultByCofactor(aPoint)
@@ -106,7 +103,6 @@ func verifySignature(A_bytes, R_bytes, S_bytes, M []byte, check_S, check_can, ch
 			return false
 		}
 	}
-
 	// 3. Mathematical check
 	hasher := sha512.New()
 	hasher.Write(R_bytes)

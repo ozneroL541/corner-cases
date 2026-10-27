@@ -52,4 +52,7 @@ jobs:
                 context: .
                 file: Dockerfile
                 push: true
-                tags: ghcr.io/${{ steps.image-version.outputs.image_repository }}/corner-cases:${{ steps.image-version.outputs.image_version }}
+                tags: |
+                  ghcr.io/${{ github.repository }}:latest
+                  ghcr.io/${{ github.repository }}:${{ steps.image-version.outputs.image_version }}
+                  ghcr.io/${{ github.repository }}:${{ github.sha }}

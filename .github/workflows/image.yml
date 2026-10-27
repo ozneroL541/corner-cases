@@ -31,12 +31,17 @@ jobs:
             - name: Set image version
               id: image-version
               # If it's a release, use the tag as the version,
+              # If it has v prefix, remove it, otherwise use the version as is,
               # otherwise use the short SHA of the commit
               run: |
                 image_repository=$(echo "$GITHUB_REPOSITORY" | tr '[:upper:]' '[:lower:]')
                 echo "image_repository=$image_repository" >> "$GITHUB_OUTPUT"
                 if [ "$GITHUB_EVENT_NAME" = "release" ]; then
+                  if [[ "$GITHUB_REF_NAME" == v* ]]; then
+                    echo "image_version=${GITHUB_REF_NAME:1}" >> "$GITHUB_OUTPUT"
+                  else
                     echo "image_version=$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"
+                  fi
                 else
                     echo "image_version=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
                 fi

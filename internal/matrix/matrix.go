@@ -27,9 +27,9 @@ func PrintMatrix(tests []TestCase) {
 
 		for i := range len(VER_FUNC) {
 			if VER_FUNC[i](verification_key, digital_signature, message) {
-				fmt.Print("[✅]|")
+				fmt.Print(" ✅|")
 			} else {
-				fmt.Print("[ ]|")
+				fmt.Print("   |")
 			}
 		}
 		fmt.Println()

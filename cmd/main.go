@@ -2,10 +2,8 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
+	"matrix"
 	"os"
-
-	matrix "matrix"
 )
 
 func main() {
@@ -17,7 +15,6 @@ func main() {
 
 	// Create JSON if it doesn't exist to ensure reproducible cryptographic inputs
 	if _, err := os.Stat(jsonFile); os.IsNotExist(err) {
-		fmt.Printf("Generating cryptographic %s file...\n", jsonFile)
 		matrix.GenerateInputsFile(jsonFile)
 	}
 	/** File data */

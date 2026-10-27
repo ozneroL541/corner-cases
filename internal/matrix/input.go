@@ -138,28 +138,69 @@ func INP5(test []TestCase) []TestCase {
 }
 
 /**
- * INP6: Standard Signature (Edge Case R = O)
+ * INP6: Standard Valid Signature (positive control case)
+ * @param tests []TestCase
+ * @return []TestCase
+ */
+/**
+ * INP6: Standard Valid Signature (positive control case)
+ * Generates an honest signature and retries until every sanity check passes.
  * @param tests []TestCase
  * @return []TestCase
  */
 func INP6(test []TestCase) []TestCase {
 	msg6 := []byte("Message6")
-	sk6, pk6 := ed_dsa.KeyGen()
-	r6, _ := hex.DecodeString("0100000000000000000000000000000000000000000000000000000000000000") // R = O canonical
+	identity := edwards25519.NewIdentityPoint()
 
-	hasher6 := sha512.New()
-	hasher6.Write(r6)
-	hasher6.Write(pk6)
-	hasher6.Write(msg6)
-	k6Scalar, _ := new(edwards25519.Scalar).SetUniformBytes(hasher6.Sum(nil))
+	for attempt := 0; attempt < 100; attempt++ {
+		sk6, pk6 := ed_dsa.KeyGen()
+		r6, s6 := ed_dsa.SigGen(sk6, pk6, msg6)
 
-	rZero6 := new(edwards25519.Scalar) // r = 0 because R = O
-	h6 := sha512.Sum512(sk6)
-	s_sk6, _ := new(edwards25519.Scalar).SetBytesWithClamping(h6[:32])
-	s6Scalar := new(edwards25519.Scalar).MultiplyAdd(k6Scalar, s_sk6, rZero6)
-	s6 := s6Scalar.Bytes()
-	test = append(test, TestCase{"INP6", "Valid Edge-Case (R=O)", hex.EncodeToString(msg6), hex.EncodeToString(pk6), hex.EncodeToString(r6), hex.EncodeToString(s6)})
-	return test
+		// S must be canonical (S < L)
+		if _, err := new(edwards25519.Scalar).SetCanonicalBytes(s6); err != nil {
+			continue
+		}
+
+		// A and R must be canonically encoded and valid points
+		if !ed_dsa.IsCanonicalY(pk6) || !ed_dsa.IsCanonicalY(r6) {
+			continue
+		}
+		aPoint, err := new(edwards25519.Point).SetBytes(pk6)
+		if err != nil {
+			continue
+		}
+		rPoint, err := new(edwards25519.Point).SetBytes(r6)
+		if err != nil {
+			continue
+		}
+
+		// A must not be a small-order point: [8]A != O
+		if new(edwards25519.Point).MultByCofactor(aPoint).Equal(identity) == 1 {
+			continue
+		}
+		// R must not be a small-order point either: [8]R != O
+		if new(edwards25519.Point).MultByCofactor(rPoint).Equal(identity) == 1 {
+			continue
+		}
+
+		// Every verifier must accept the signature
+		sig := DigitalSignature{R: r6, S: s6}
+		allAccept := true
+		for _, ver := range VER_FUNC {
+			if !ver(pk6, sig, msg6) {
+				allAccept = false
+				break
+			}
+		}
+		if !allAccept {
+			continue
+		}
+
+		test = append(test, TestCase{"INP6", "Standard Valid Signature", hex.EncodeToString(msg6), hex.EncodeToString(pk6), hex.EncodeToString(r6), hex.EncodeToString(s6)})
+		return test
+	}
+
+	panic("INP6: could not generate a signature passing all checks")
 }
 
 /** Array of INP functions */

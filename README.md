@@ -114,17 +114,20 @@ Indeed, the sign is bounded to the message iff $[k]A\neq 0$ and the order of a p
 
 ---
 
-## INP6: Valid Edge Case ($R = \mathcal{O}$)
+---
 
-*   **Why it was chosen:** To check that a verifier does not reject a signature just because $R$ is a small-order point. The identity point $\mathcal{O}$ has order 1, but the small-order check applies only to the public key $A$, never to $R$. This input is the canonical counterpart of INP5: it uses the same $R = \mathcal{O}$, but with the canonical encoding $y = 1$. All six verifiers (VER1 - VER6) must accept it (yielding `[v, v, v, v, v, v]`).
-*   **How it was computed:** We generated a normal keypair ($sk, A$) with $A = [s]B$, where $s$ is the clamped secret scalar derived from $sk$. We set $r = 0$, so $R = [0]B = \mathcal{O}$, encoded canonically as `0100...00` in hex. We then computed the challenge $k = H(R \parallel A \parallel M)$ and the scalar $S = r + k \cdot s = k \cdot s \pmod L$.
+## INP6: Standard Valid Signature
+
+*   **Why it was chosen:** To establish a positive baseline. We need an input that is mathematically perfect and strictly conforms to RFC 8032, so that all six verifiers (VER1 - VER6) accept it (yielding `[v, v, v, v, v, v]`). Together with INP1 (which every verifier rejects), it guarantees that the verifiers are neither trivially rejecting nor trivially accepting every input, and that any difference observed in the other rows is due to the specific corner case being tested.
+*   **How it was computed:** We generated a standard keypair using the provided `KeyGen()` function and signed `"Message6"` using the standard `SigGen()` function. Here $s$ is the clamped secret scalar derived from $sk$, so that $A = [s]B$, and $r$ is the nonce scalar, so that $R = [r]B$. The resulting scalar $S$ is strictly less than the curve order $L$, and the points $R$ and $A$ are canonically encoded. Since $B$ has prime order $L$, both $A$ and $R$ lie in the prime-order subgroup and have no torsion component, unless $s \equiv 0$ or $r \equiv 0 \pmod L$, which happens with negligible probability. To be even safer, the generation is repeated until all the checks pass: canonical $S$, canonical $A$ and $R$, $[8]A \neq \mathcal{O}$, $[8]R \neq \mathcal{O}$, and acceptance by all six verifiers.
 *   **Mathematical Proof:** The verification equation holds exactly, so the cofactored one holds as well:
-    1. **Left Side:** $[S]B = [k \cdot s]B = [k]([s]B) = [k]A$
-    2. **Right Side:** $R + [k]A = \mathcal{O} + [k]A = [k]A$
-    3. Both sides are equal to $[k]A$, and multiplying both by 8 preserves the cofactor equality.
+    1. $[S]B = [r + k \cdot s]B = [r]B + [k]([s]B) = R + [k]A$
+    2. Multiplying both sides by 8 preserves the equality, hence also the cofactored equation holds.
+    3. All structural checks pass: $S < L$, $R$ and $A$ are canonical, and $[8]A \neq \mathcal{O}$.
+*   **Citation:**
+    *   RFC 8032, Section 5.1.7 (Verify).
 
-  *  **Citation:**
-    * IACR ePrint 2020/1244, Introduction.
+---
 
 ---
   

@@ -28,7 +28,7 @@ make run
 ### Docker
 After compiling the Docker image:
 ```sh
-docker run ghcr.io/oznerol541/corner-cases/corner-cases
+docker run ghcr.io/oznerol541/corner-cases
 ```
 
 ## Library choice for Ed5519

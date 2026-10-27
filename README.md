@@ -3,14 +3,41 @@
 
 # Corner Cases
 
-> [!Warning]
-> Do not use this code in real-world implementation.
+## Requirements
+Either:
+- Go 1.27.3
+- Make
+or:
+- Docker
+
+## Compilation
+### Natively
+To natively compile this project run:
+```sh
+make build
+```
+The executable will be in `bin/app`.
+### Docker
+Otherwise you can build a docker image with:
+```sh
+docker build -t ex0601 .
+```
+
+## Execution
+### Natively
+```sh
+make run
+```
+### Docker
+After compiling the Docker image:
+```sh
+docker run ex0601:latest
+```
 
 ## Library choice for Ed5519
 We used [filippo.io/edwards25519](https://github.com/FiloSottile/edwards25519) for computing scalar multyplication and sum of points over the elliptic curve. The library contains the requested operations and is well mantained.  
 Moreover, the mantainer seems to be competent and very expirienced in the topics.
 
-<<<<<<< HEAD
 ## Choice of the inputs for the Verification
 This document details the theoretical justification, computation method, and source citations for each of the six test inputs (INP1 - INP6) used to replicate the Ed25519 verification compatibility matrix. 
 
@@ -46,38 +73,6 @@ Indeed, the sign is bounded to the message iff $[k]A\neq 0$ and the order of a p
     *   Henry de Valence, "It's 25519am", Section *Validation checks* (Small-order check).
 
 ---
-=======
-## Requirements
-Either:
-- Go 1.27.3
-- Make
-or:
-- Docker
-
-## Compilation
-### Natively
-To natively compile this project run:
-```sh
-make build
-```
-The executable will be in `bin/app`.
-### Docker
-Otherwise you can build a docker image with:
-```sh
-docker build -t ex0601 .
-```
-
-## Execution
-### Natively
-```sh
-make run
-```
-### Docker
-After compiling the Docker image:
-```sh
-docker run ex0601:latest
-```
->>>>>>> fb24ae86d42147461d2b61c2f35453c5c270b686
 
 ## Author
 - 267234 Marco Egidio Pusceddu @MARCO5P

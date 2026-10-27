@@ -25,3 +25,4 @@ test:
 
 clean:
 	@rm -rf $(BIN_DIR) test.json cmd/test.json
+	cd $(LIB_DIR)/$(LIBRARIES) && make clean || true

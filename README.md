@@ -46,10 +46,17 @@ For all test cases, the messages (e.g., `"Message1"`, `"Message2"`) were chosen 
 
 ---
 
-## INP1: Standard Valid Signature
+## INP1: Invalid Signature (Control Case)
 
-*   **Why it was chosen:** To establish a baseline. We need an input that is mathematically perfect and strictly conforms to RFC 8032 to ensure that all six verifiers (VER1 - VER6) accept it (yielding `[v, v, v, v, v, v]`).
-*   **How it was computed:** We generated a standard keypair using the provided `KeyGen()` function and signed `"Message1"` using the standard `SigGen()` function. The resulting scalar $S$ is strictly less than the curve order $L$, and the point $R$ is canonically encoded.
+*   **Why it was chosen:** To establish a negative baseline. We need an input that is well-formed (canonical $S$, canonical $R$, public key $A$ of large order) but mathematically wrong, so that all six verifiers (VER1 - VER6) reject it (yielding `[x, x, x, x, x, x]`). 
+*   **How it was computed:** We generated a standard keypair using the provided `KeyGen()` function and signed `"Message1"` using the standard `SigGen()` function, obtaining a valid signature $(R, S)$. We then tampered with the scalar, computing $S' = S + 1 \pmod L$ and keeping $R$ unchanged. Since $S' < L$, the structural checks (canonical $S$, canonical $R$, small-order $A$) all pass, and only the verification equation can reject it.
+*   **Mathematical Proof:** It is enough to show that the cofactored equation fails. The uncofactored equation implies the cofactored one (multiply both sides by 8), so if the cofactored check rejects the signature, the uncofactored one rejects it as well.
+    1. $[8][S']B = [8]([S]B + B) = [8](R + [k]A) + [8]B$
+    2. This equals $[8](R + [k]A)$ only if $[8]B = \mathcal{O}$.
+    3. $B$ has prime order $L$ and $L \nmid 8$, so $[8]B \neq \mathcal{O}$.
+    4. Hence the cofactored equation fails, and so does the uncofactored one.
+*   **Citation:**
+    * IACR ePrint 2020/1244, Introduction.
 
 ---
 
@@ -102,6 +109,22 @@ Indeed, the sign is bounded to the message iff $[k]A\neq 0$ and the order of a p
 -   **Citation:** 
     *   IACR ePrint 2020/1244, Section 5.2 ("Non-canonical points").
     *   Henry de Valence, "It's 25519am", Section *Validation checks* (Canonical encoding).
+
+---
+
+## INP6: Valid Edge Case ($R = \mathcal{O}$)
+
+*   **Why it was chosen:** To check that a verifier does not reject a signature just because $R$ is a small-order point. The identity point $\mathcal{O}$ has order 1, but the small-order check applies only to the public key $A$, never to $R$. This input is the canonical counterpart of INP5: it uses the same $R = \mathcal{O}$, but with the canonical encoding $y = 1$. All six verifiers (VER1 - VER6) must accept it (yielding `[v, v, v, v, v, v]`).
+*   **How it was computed:** We generated a normal keypair ($sk, A$) with $A = [s]B$, where $s$ is the clamped secret scalar derived from $sk$. We set $r = 0$, so $R = [0]B = \mathcal{O}$, encoded canonically as `0100...00` in hex. We then computed the challenge $k = H(R \parallel A \parallel M)$ and the scalar $S = r + k \cdot s = k \cdot s \pmod L$.
+*   **Mathematical Proof:** The verification equation holds exactly, so the cofactored one holds as well:
+    1. **Left Side:** $[S]B = [k \cdot s]B = [k]([s]B) = [k]A$
+    2. **Right Side:** $R + [k]A = \mathcal{O} + [k]A = [k]A$
+    3. Both sides are equal to $[k]A$, and multiplying both by 8 preserves the cofactor equality.
+
+  *  **Citation:**
+    * IACR ePrint 2020/1244, Introduction.
+
+---
   
 ## Author
 - 267234 Marco Egidio Pusceddu @MARCO5P

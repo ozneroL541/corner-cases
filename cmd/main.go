@@ -9,7 +9,6 @@ import (
 func main() {
 	/**
 	 * Tests JSON file
-	 * TODO: Reference
 	 */
 	const jsonFile = "test.json"
 

@@ -1,5 +1,6 @@
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](LICENSE.md)
 [![Tests](https://github.com/ozneroL541/corner-cases/actions/workflows/test.yml/badge.svg)](https://github.com/ozneroL541/corner-cases/actions/workflows/test.yml)
+[![Latest Release](https://img.shields.io/github/v/release/ozneroL541/corner-cases)](https://github.com/ozneroL541/corner-cases/releases/latest)
 
 # Corner Cases
 

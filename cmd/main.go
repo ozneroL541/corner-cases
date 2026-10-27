@@ -14,7 +14,9 @@ import (
 	"filippo.io/edwards25519"
 )
 
-// TestCase represents a single verification triple
+/**
+ * TestCase struct
+ */
 type TestCase struct {
 	ID          string `json:"ID"`
 	Description string `json:"Description"`
@@ -24,6 +26,9 @@ type TestCase struct {
 	S           string `json:"S"`
 }
 
+/**
+ * DigitalSignature struct
+ */
 type DigitalSignature struct {
 	R []byte `json:"R"`
 	S []byte `json:"S"`
@@ -82,7 +87,18 @@ func parsePermissivePoint(b []byte) (*edwards25519.Point, bool) {
 // CORE VERIFICATION ENGINE
 // ---------------------------------------------------------
 
-// verifySignature strictly implements the logic of the edge cases.
+/**
+ * verifySignature performs the EdDSA signature verification with configurable checks.
+ * @param A_bytes []byte - Public key (32 bytes)
+ * @param R_bytes []byte - Signature component R (32 bytes)
+ * @param S_bytes []byte - Signature component S (32 bytes)
+ * @param M []byte - Message to verify
+ * @param check_S bool - Whether to check if S is canonical
+ * @param check_can bool - Whether to check if A and R are canonical
+ * @param check_small bool - Whether to perform small-order check on A
+ * @param use_cofactor bool - Whether to use cofactor multiplication in the final comparison
+ * @return bool - true if signature is valid, false otherwise
+ */
 func verifySignature(A_bytes, R_bytes, S_bytes, M []byte, check_S, check_can, check_small, use_cofactor bool) bool {
 	// 1. Parse and apply structural checks
 	sScalar, isSCanonical := parsePermissiveScalar(S_bytes)
@@ -131,10 +147,6 @@ func verifySignature(A_bytes, R_bytes, S_bytes, M []byte, check_S, check_can, ch
 
 	return leftSide.Equal(rightSide) == 1
 }
-
-// ---------------------------------------------------------
-// THE 6 VERIFICATION FUNCTIONS
-// ---------------------------------------------------------
 
 func VER1(verification_key []byte, digital_signature DigitalSignature, message []byte) bool {
 	return verifySignature(verification_key, digital_signature.R, digital_signature.S, message, true, false, false, false)

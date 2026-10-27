@@ -130,23 +130,36 @@ func verifySignature(A_bytes, R_bytes, S_bytes, M []byte, check_S, check_can, ch
 	return leftSide.Equal(rightSide) == 1
 }
 
+// Argument order: check_S, check_can, check_small, use_cofactor
+
+// VER1: S check + canonical check, uncofactored equation
 func VER1(verification_key []byte, digital_signature DigitalSignature, message []byte) bool {
-	return verifySignature(verification_key, digital_signature.R, digital_signature.S, message, true, false, false, false)
+	return verifySignature(verification_key, digital_signature.R, digital_signature.S, message, true, true, false, false)
 }
+
+// VER2: canonical check only, cofactored equation
 func VER2(verification_key []byte, digital_signature DigitalSignature, message []byte) bool {
-	return verifySignature(verification_key, digital_signature.R, digital_signature.S, message, false, false, false, true)
-}
-func VER3(verification_key []byte, digital_signature DigitalSignature, message []byte) bool {
-	return verifySignature(verification_key, digital_signature.R, digital_signature.S, message, true, true, false, true)
-}
-func VER4(verification_key []byte, digital_signature DigitalSignature, message []byte) bool {
 	return verifySignature(verification_key, digital_signature.R, digital_signature.S, message, false, true, false, true)
 }
+
+// VER3: small-order check only, cofactored equation
+func VER3(verification_key []byte, digital_signature DigitalSignature, message []byte) bool {
+	return verifySignature(verification_key, digital_signature.R, digital_signature.S, message, false, false, true, true)
+}
+
+// VER4: canonical + small-order checks, cofactored equation
+func VER4(verification_key []byte, digital_signature DigitalSignature, message []byte) bool {
+	return verifySignature(verification_key, digital_signature.R, digital_signature.S, message, false, true, true, true)
+}
+
+// VER5: S check + small-order check, uncofactored equation
 func VER5(verification_key []byte, digital_signature DigitalSignature, message []byte) bool {
 	return verifySignature(verification_key, digital_signature.R, digital_signature.S, message, true, false, true, false)
 }
+
+// VER6: S check + small-order check, cofactored equation
 func VER6(verification_key []byte, digital_signature DigitalSignature, message []byte) bool {
-	return verifySignature(verification_key, digital_signature.R, digital_signature.S, message, false, false, true, false)
+	return verifySignature(verification_key, digital_signature.R, digital_signature.S, message, true, false, true, true)
 }
 
 /**

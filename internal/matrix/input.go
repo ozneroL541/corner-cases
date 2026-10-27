@@ -15,7 +15,7 @@ import (
 )
 
 /**
- * INP1: Standard Signature
+ * INP1: Invalid Signature (control case, must be rejected by every verifier)
  * @param tests []TestCase
  * @return []TestCase
  */
@@ -23,7 +23,15 @@ func INP1(tests []TestCase) []TestCase {
 	sk1, pk1 := ed_dsa.KeyGen()
 	msg1 := []byte("Message1")
 	r1, s1 := ed_dsa.SigGen(sk1, pk1, msg1)
-	tests = append(tests, TestCase{"INP1", "Standard Valid Signature", hex.EncodeToString(msg1), hex.EncodeToString(pk1), hex.EncodeToString(r1), hex.EncodeToString(s1)})
+
+	// Tamper with S: S' = S + 1 mod L (still canonical, but the equation no longer holds)
+	sScalar, _ := new(edwards25519.Scalar).SetCanonicalBytes(s1)
+	oneBytes := make([]byte, 32)
+	oneBytes[0] = 1
+	one, _ := new(edwards25519.Scalar).SetCanonicalBytes(oneBytes)
+	sBad := new(edwards25519.Scalar).Add(sScalar, one)
+
+	tests = append(tests, TestCase{"INP1", "Invalid Signature", hex.EncodeToString(msg1), hex.EncodeToString(pk1), hex.EncodeToString(r1), hex.EncodeToString(sBad.Bytes())})
 	return tests
 }
 

@@ -33,4 +33,5 @@ go.work.sum
 # .vscode/
 
 bin/
-*.json
+test.json
+cmd/test.json

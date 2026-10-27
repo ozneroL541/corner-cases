@@ -1,3 +1,6 @@
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](LICENSE.md)
+[![Tests](https://github.com/ozneroL541/corner-cases/actions/workflows/test.yml/badge.svg)](https://github.com/ozneroL541/corner-cases/actions/workflows/test.yml)
+
 # Corner Cases
 
 > [!Warning]
@@ -7,7 +10,36 @@
 We used [filippo.io/edwards25519](https://github.com/FiloSottile/edwards25519) for computing scalar multyplication and sum of points over the elliptic curve. The library contains the requested operations and is well mantained.  
 Moreover, the mantainer seems to be competent and very expirienced in the topics.
 
+## Requirements
+Either:
+- Go 1.27.3
+- Make
+or:
+- Docker
+
+## Compilation
+### Natively
+To natively compile this project run:
+```sh
+make build
+```
+The executable will be in `bin/app`.
+### Docker
+Otherwise you can build a docker image with:
+```sh
+docker build -t ex0601 .
+```
+
 ## Execution
+### Natively
+```sh
+make run
+```
+### Docker
+After compiling the Docker image:
+```sh
+docker run ex0601:latest
+```
 
 ## Author
 - 267234 Marco Egidio Pusceddu @MARCO5P

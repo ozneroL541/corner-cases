@@ -14,6 +14,7 @@ build: lib
 	@go build -o $(BIN) ./cmd
 
 lib:
+	@mkdir -p $(LIB_DIR)/$(LIBRARIES)/bin
 	cd $(LIB_DIR)/$(LIBRARIES) && go build -buildmode=archive -o $(BIN_DIR)/$(LIBRARIES).a
 
 tidy:

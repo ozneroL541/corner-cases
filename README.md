@@ -8,6 +8,7 @@
 Either:
 - Go 1.27.3
 - Make
+
 or:
 - Docker
 

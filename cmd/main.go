@@ -1,20 +1,28 @@
 package main
 
-import "fmt"
-
-const expectedOutput = `     | V | V | V | V | V | V |
-     | E | E | E | E | E | E |
-     | R | R | R | R | R | R |
-     | 1 | 2 | 3 | 4 | 5 | 6 |
-------------------------------
-INP1 |   |   |   |   |   |   |
-INP2 |   | ✅| ✅| ✅|   |   |
-INP3 | ✅| ✅|   |   |   |   |
-INP4 |   | ✅| ✅| ✅|   | ✅|
-INP5 |   |   | ✅|   | ✅| ✅|
-INP6 | ✅| ✅| ✅| ✅| ✅| ✅|
-`
+import (
+	"encoding/json"
+	"matrix"
+	"os"
+)
 
 func main() {
-	fmt.Print(expectedOutput)
+	/**
+	 * Tests JSON file
+	 * TODO: Reference
+	 */
+	const jsonFile = "test.json"
+
+	// Create JSON if it doesn't exist to ensure reproducible cryptographic inputs
+	if _, err := os.Stat(jsonFile); os.IsNotExist(err) {
+		matrix.GenerateInputsFile(jsonFile)
+	}
+	/** File data */
+	fileData, _ := os.ReadFile(jsonFile)
+	/** JSON Tests */
+	var tests []matrix.TestCase
+
+	json.Unmarshal(fileData, &tests)
+
+	matrix.PrintMatrix(tests)
 }

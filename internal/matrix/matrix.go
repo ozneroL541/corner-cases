@@ -3,6 +3,9 @@ package matrix
 import (
 	"encoding/hex"
 	"fmt"
+
+	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/app"
 )
 
 /**
@@ -29,11 +32,19 @@ func ComputeMatrix(tests []TestCase) [][]bool {
 /**
  * PrintMatrix prints the results of the verification functions applied to the test cases.
  * @param tests []TestCase
+ * @param graphical bool - If true, the matrix will be printed graphically. If false, it will be printed on the terminal.
  */
-func PrintMatrix(tests []TestCase) {
+func PrintMatrix(tests []TestCase, graphical bool) {
 	// Results of the verification functions applied to the test cases
 	results := ComputeMatrix(tests)
 	printOnTerminal(results)
+	if graphical {
+		a := app.New()
+		w := a.NewWindow("Verification Matrix")
+		w.SetContent(NewBooleanMatrixTable(results))
+		w.Resize(fyne.NewSize(imageWidth, imageHeight))
+		w.ShowAndRun()
+	}
 }
 
 /**

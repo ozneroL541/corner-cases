@@ -7,10 +7,14 @@ import (
 )
 
 func main() {
+	const gui bool = true
 	/**
 	 * Tests JSON file
-	 * TODO: Reference
 	 */
+	exercise(gui)
+}
+
+func exercise(gui bool) {
 	const jsonFile = "test.json"
 
 	// Create JSON if it doesn't exist to ensure reproducible cryptographic inputs
@@ -24,5 +28,5 @@ func main() {
 
 	json.Unmarshal(fileData, &tests)
 
-	matrix.PrintMatrix(tests)
+	matrix.PrintMatrix(tests, gui)
 }

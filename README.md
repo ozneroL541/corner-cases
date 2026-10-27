@@ -8,6 +8,7 @@
 Either:
 - Go 1.27.3
 - Make
+- [Fyne prerequisites](https://docs.fyne.io/started/quick/?utm_source=chatgpt.com)
 
 or:
 - Docker

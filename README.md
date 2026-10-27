@@ -73,7 +73,23 @@ Indeed, the sign is bounded to the message iff $[k]A\neq 0$ and the order of a p
     *   Henry de Valence, "It's 25519am", Section *Validation checks* (Small-order check).
 
 ---
-
+## INP4: Torsion Component added to R
+- **Why it was chosen:** To differentiate between the *Uncofactored* and *Cofactored* verification equations. Adding a low-order torsion point $T$ to $R$ breaks the uncofactored equation, but multiplying the whole equation by the cofactor $h=8$ neutralizes $T$ (since $[8]T = \mathcal{O}$), causing cofactored verifiers to accept it. Because multiple valid signatures can be created for the exact same message by adding different torsion points, this edge case formally permits a **signature malleability attack**.
+- **How it was computed:** We generated a normal keypair ($sk, A$). Instead of a standard deterministic $R$, we picked a random scalar $r$ and computed $R_{base} = [r]B$. We then selected a torsion point $T$ of order 8 from the `smallOrderPoints` array and computed our malicious $R_{final} = R_{base} + T$. Finally, we computed the challenge hash $k = H(R_{final} \parallel A \parallel M)$ and manually forged the scalar $S = r + k \cdot sk \pmod L$. 
+- **Mathematical Proof:** The cofactor equation is perfectly satisfied. Here is the step-by-step expansion:
+  1. **Left Side:** 
+     $$[8][S]B = [8]([r + k \cdot sk]B)$$
+     $$[8][S]B = [8]([r]B + [k][sk]B)$$
+     $$[8][S]B = [8](R_{base} + [k]A)$$
+  2. **Right Side:** 
+     $$[8]R_{final} + [8][k]A = [8](R_{base} + T) + [8][k]A$$
+     $$[8]R_{final} + [8][k]A = [8]R_{base} + [8]T + [8][k]A$$
+  3. **Neutralizing the Torsion Point:** Because $T$ has an order of 8, $[8]T = \mathcal{O}$ (the identity point).
+     $$[8]R_{base} + \mathcal{O} + [8][k]A = [8](R_{base} + [k]A)$$
+  4. Both sides resolve to $[8](R_{base} + [k]A)$, proving the equation holds.
+- **Citation:** 
+  * IACR ePrint 2020/1244, Section 5.4 ("Adding low-order points to R").
+  * Henry de Valence, "It's 25519am", Section *The verification equation* (Cofactored vs Uncofactored equations).
 ## Author
 - 267234 Marco Egidio Pusceddu @MARCO5P
 - 267646 Radice Lorenzo @ozneroL541

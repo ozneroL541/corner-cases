@@ -38,13 +38,25 @@ func PrintMatrix(tests []TestCase, graphical bool) {
 	// Results of the verification functions applied to the test cases
 	results := ComputeMatrix(tests)
 	printOnTerminal(results)
+	// flush the stdout buffer to ensure the terminal output is displayed before the graphical output
+	fmt.Print("\033[0m")   // Reset terminal color
+	fmt.Print("\033[?25h") // Show cursor
 	if graphical {
-		a := app.New()
-		w := a.NewWindow("Verification Matrix")
-		w.SetContent(NewBooleanMatrixTable(results))
-		w.Resize(fyne.NewSize(imageWidth, imageHeight))
-		w.ShowAndRun()
+		printGraphically(results)
 	}
+}
+
+/**
+ * Graphically print the results of the verification functions applied to the test cases
+ * in a window.
+ * @param results [][]bool - A 2D slice where each row corresponds to a test case and each column corresponds to a verification function.
+ */
+func printGraphically(results [][]bool) {
+	a := app.New()
+	w := a.NewWindow("Verification Matrix")
+	w.SetContent(NewBooleanMatrixTable(results))
+	w.Resize(fyne.NewSize(imageWidth, imageHeight))
+	w.ShowAndRun()
 }
 
 /**

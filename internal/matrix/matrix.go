@@ -52,6 +52,10 @@ func PrintMatrix(tests []TestCase, graphical bool) {
  * @param results [][]bool - A 2D slice where each row corresponds to a test case and each column corresponds to a verification function.
  */
 func printGraphically(results [][]bool) {
+	defer func() {
+		_ = recover()
+	}()
+
 	a := app.New()
 	w := a.NewWindow("Verification Matrix")
 	w.SetContent(NewBooleanMatrixTable(results))

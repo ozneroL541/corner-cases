@@ -7,10 +7,17 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         build-essential \
         pkg-config \
-        libgl1-mesa-dev \
         xorg-dev \
         libwayland-dev \
-        libxkbcommon-dev && \
+        libxkbcommon-dev \
+        libgl1 \
+        libgl1-mesa-dev \
+        libegl1 \
+        libwayland-client0 \
+        libwayland-cursor0 \
+        libwayland-egl1 \
+        libxkbcommon0 \
+        libgl1-mesa-dri && \
     rm -rf /var/lib/apt/lists/*
 COPY . .
 RUN make build
@@ -21,19 +28,22 @@ RUN apt-get update && \
         libgl1 \
         libglx0 \
         libgl1-mesa-dri \
-        libx11-6 \
-        libxcursor1 \
-        libxrandr2 \
-        libxinerama1 \
-        libxi6 \
-        libxxf86vm1 \
-        libxkbcommon0 \
+        libegl1 \
         libwayland-client0 \
         libwayland-cursor0 \
-        libwayland-egl1 && \
+        libwayland-egl1 \
+        libx11-6 \
+        libxcursor1 \
+        libxi6 \
+        libxinerama1 \
+        libxrandr2 \
+        libxxf86vm1 \
+        libxkbcommon0 && \
     rm -rf /var/lib/apt/lists/*
 RUN groupadd --system app && \
-    useradd --system --gid app --create-home app
+    useradd --system --gid app --create-home app && \
+    mkdir -p /home/app/.cache /run/user && \
+    chown -R app:app /home/app
 WORKDIR /app
 COPY --from=builder --chown=app:app /app/bin/app /app/bin/app
 USER app

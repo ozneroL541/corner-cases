@@ -16,9 +16,6 @@ import (
 )
 
 const (
-	matrixRows = 6
-	matrixCols = 6
-
 	imageWidth  = 283
 	imageHeight = 273
 	supersample = 2
@@ -68,35 +65,37 @@ func renderMatrix(matrix [][]bool) image.Image {
 		panic("create header font: " + err.Error())
 	}
 	defer headerFace.Close()
+	var matrixCols uint = uint(len(matrix))
+	var matrixRows uint = uint(len(matrix[0]))
 
 	big := image.NewRGBA(image.Rect(0, 0, imageWidth*supersample, imageHeight*supersample))
 	imagedraw.Draw(big, big.Bounds(), image.NewUniform(backgroundColor), image.Point{}, imagedraw.Src)
 
 	// Draw the light, thin grid first so the text and indicators sit cleanly on top.
-	tableRight := firstColX + matrixCols*columnW
-	tableBottom := headerH + matrixRows*rowH
-	for col := 0; col <= matrixCols; col++ {
-		x := firstColX + col*columnW
+	tableRight := int(firstColX + matrixCols*columnW)
+	tableBottom := int(headerH + matrixRows*rowH)
+	for col := uint(0); col <= matrixCols; col++ {
+		x := firstColX + int(col)*columnW
 		fillRect(big, x-1, 0, 2, tableBottom, gridColor)
 	}
-	for row := 0; row <= matrixRows; row++ {
-		y := headerH + row*rowH
+	for row := uint(0); row <= matrixRows; row++ {
+		y := headerH + int(row)*rowH
 		fillRect(big, leftMargin, y-1, tableRight-leftMargin, 2, gridColor)
 	}
 
 	// Row labels are centered in the left-hand label column.
-	for row := 0; row < matrixRows; row++ {
+	for row := range matrixRows {
 		label := "INP" + string(rune('1'+row))
 		centerX := leftMargin + labelWidth/2
-		centerY := headerH + row*rowH + rowH/2
+		centerY := headerH + int(row)*rowH + rowH/2
 		drawCenteredText(big, label, rowFace, centerX, centerY, textColor)
 	}
 
 	// Column labels are rasterized, rotated counterclockwise, then centered.
-	for col := 0; col < matrixCols; col++ {
+	for col := range matrixCols {
 		label := "VER" + string(rune('1'+col))
 		rotated := rotatedText(label, headerFace, textColor)
-		centerX := firstColX + col*columnW + columnW/2
+		centerX := firstColX + int(col)*columnW + columnW/2
 		centerY := headerH / 2
 		x := centerX - rotated.Bounds().Dx()/2
 		y := centerY - rotated.Bounds().Dy()/2
@@ -105,10 +104,10 @@ func renderMatrix(matrix [][]bool) image.Image {
 
 	// Draw the checkbox squares after the grid and labels.
 	boxSize := 23 * supersample
-	for row := 0; row < matrixRows; row++ {
-		for col := 0; col < matrixCols; col++ {
-			centerX := firstColX + col*columnW + columnW/2
-			centerY := headerH + row*rowH + rowH/2
+	for row := range matrixRows {
+		for col := range matrixCols {
+			centerX := firstColX + int(col)*columnW + columnW/2
+			centerY := headerH + int(row)*rowH + rowH/2
 			x := centerX - boxSize/2
 			y := centerY - boxSize/2
 

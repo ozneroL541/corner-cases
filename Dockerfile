@@ -49,4 +49,4 @@ COPY --from=builder --chown=app:app /app/bin/app .
 RUN chown -R app:app /app
 RUN chmod +x app
 USER app
-ENTRYPOINT ["sleep", "infinity"]
+ENTRYPOINT ["./app"]

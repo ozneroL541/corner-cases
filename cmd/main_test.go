@@ -31,7 +31,9 @@ func TestMainOutput(t *testing.T) {
 		os.Stdout = originalStdout
 	})
 
-	exercise(false)
+	if err := exercise(false); err != nil {
+		t.Fatalf("exercise failed: %v", err)
+	}
 
 	if err := write.Close(); err != nil {
 		t.Fatalf("close stdout pipe: %v", err)

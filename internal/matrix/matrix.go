@@ -3,6 +3,7 @@ package matrix
 import (
 	"encoding/hex"
 	"fmt"
+	"os"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
@@ -53,7 +54,9 @@ func PrintMatrix(tests []TestCase, graphical bool) {
  */
 func printGraphically(results [][]bool) {
 	defer func() {
-		_ = recover()
+		if recovered := recover(); recovered != nil {
+			fmt.Fprintf(os.Stderr, "graphical output failed: %v\n", recovered)
+		}
 	}()
 
 	a := app.New()

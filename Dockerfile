@@ -45,6 +45,8 @@ RUN groupadd --system app && \
     mkdir -p /home/app/.cache /run/user && \
     chown -R app:app /home/app
 WORKDIR /app
-COPY --from=builder --chown=app:app /app/bin/app /app/bin/app
+COPY --from=builder --chown=app:app /app/bin/app .
+RUN chown -R app:app /app
+RUN chmod +x app
 USER app
-ENTRYPOINT ["/app/bin/app"]
+ENTRYPOINT ["sleep", "infinity"]

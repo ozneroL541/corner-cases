@@ -204,12 +204,13 @@ var INP_FUNC = []func([]TestCase) []TestCase{INP1, INP2, INP3, INP4, INP5, INP6}
 /**
  * Generate a JSON file containing the 6 verification functions applied to the 6 test cases.
  */
-func GenerateInputsFile(filename string) {
+func GenerateInputsFile(filename string) error {
 	/** Test Cases for the 6 Verification Functions **/
 	var test []TestCase
 	for _, inpFunc := range INP_FUNC {
 		test = inpFunc(test)
 	}
 	fileData, _ := json.MarshalIndent(test, "", "  ")
-	os.WriteFile(filename, fileData, 0644)
+	err := os.WriteFile(filename, fileData, 0644)
+	return err
 }

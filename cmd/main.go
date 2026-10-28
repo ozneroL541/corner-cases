@@ -19,7 +19,10 @@ func exercise(gui bool) {
 
 	// Create JSON if it doesn't exist to ensure reproducible cryptographic inputs
 	if _, err := os.Stat(jsonFile); os.IsNotExist(err) {
-		matrix.GenerateInputsFile(jsonFile)
+		err = matrix.GenerateInputsFile(jsonFile)
+		if err != nil {
+			panic(err)
+		}
 	}
 	/** File data */
 	fileData, _ := os.ReadFile(jsonFile)

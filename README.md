@@ -1,6 +1,6 @@
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](LICENSE.md)
-[![Tests](https://github.com/ozneroL541/corner-cases/actions/workflows/test.yml/badge.svg)](https://github.com/ozneroL541/corner-cases/actions/workflows/test.yml)
-[![Latest Release](https://img.shields.io/github/v/release/ozneroL541/corner-cases)](https://github.com/ozneroL541/corner-cases/releases/latest)
+[![Tests](https://github.com/radix54/corner-cases/actions/workflows/test.yml/badge.svg)](https://github.com/radix54/corner-cases/actions/workflows/test.yml)
+[![Latest Release](https://img.shields.io/github/v/release/radix54/corner-cases)](https://github.com/radix54/corner-cases/releases/latest)
 
 # Corner Cases
 
@@ -28,7 +28,7 @@ make run
 ### Docker
 After compiling the Docker image:
 ```sh
-docker run ghcr.io/oznerol541/corner-cases
+docker run ghcr.io/radix54/corner-cases
 ```
 
 ## Library choice for Ed5519
@@ -128,7 +128,7 @@ Indeed, the sign is bounded to the message iff $[k]A\neq 0$ and the order of a p
   
 ## Author
 - 267234 Marco Egidio Pusceddu @MARCO5P
-- 267646 Radice Lorenzo @ozneroL541
+- 267646 Radice Lorenzo @radix54
 
 ## License
 Copyright (C) 2026 Marco Egidio Pusceddu, Lorenzo Radice
